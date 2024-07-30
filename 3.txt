@@ -1,0 +1,102 @@
+#include <iostream>
+#include <locale.h>
+#include <fstream>
+#include <string>
+using namespace std;
+
+void EncryptionWithKeys(string text, fstream& fout);
+string ToBinaryString(string text);
+string ToBinaryString(int n);
+string ToNormText(string text);
+
+int main()
+{
+	setlocale(LC_ALL, "Russian");
+	cout << "Данные берутся из fin.txt, результат записывается в fout.txt" << endl;
+	ifstream fin("fin.txt");
+	fstream fout("fout.txt", ios_base::out | ios::binary | ios_base::trunc);
+	string str, text;
+	getline(fin, str);
+	text += str;
+	while (!fin.eof()) {
+		getline(fin, str);
+		text += '\n' + str; //Для определения конца строки
+	}
+
+	EncryptionWithKeys(text, fout);
+
+	fin.close();
+	fout.close();
+	return 0;
+}
+
+void EncryptionWithKeys(string text, fstream& fout) {
+	cout << "Введите ключ" << endl;
+	string key;
+	cin >> key;
+
+	string keyBin;
+
+	keyBin = ToBinaryString(key);
+
+
+	string textBin = ToBinaryString(text);
+	cout << "Текст: ";
+	for (int i = 0; i < textBin.size(); i++) {
+		if (i % 4 == 0) cout << " ";
+		cout << textBin[i];
+	}
+	cout << endl;
+	
+	cout << "Ключ: ";
+	for (int i = 0; i < keyBin.size(); i++) {
+		if (i % 4 == 0) cout << " ";
+		cout << keyBin[i];
+	}
+	cout << endl;
+
+	string resBin = "";
+	for (int i = 0; i < textBin.size();) {
+		for (int j = 0; j < keyBin.size() && i < textBin.size(); j++, i++) { // конъюнкция или побитовое и
+			if (textBin[i] == '1' && keyBin[j] == '1')
+				resBin += "1";
+			else
+				resBin += "0";
+		}
+	}
+	cout << "Результат: ";
+	for (int i = 0; i < resBin.size(); i++) {
+		if (i % 4 == 0) cout << " ";
+		cout << resBin[i];
+	}
+
+
+}
+
+string ToBinaryString(string text) {
+	string textBin = "";
+	int letter;
+	for (int i = 0; i < text.size(); i++) {
+		letter = text[i] - '0';
+		textBin += ToBinaryString(letter);
+	}
+	return textBin;
+}
+
+string ToBinaryString(int n) {
+	string res;
+	if (n == numeric_limits<int>::digits, '0');
+	string buffer;
+	buffer.reserve(numeric_limits<int>::digits + 1); //+1 для минуса
+	bool negative = (n < 0);
+	if (negative)
+		n = -n;
+	do {
+		buffer += char('0' + n % 2);
+		n = n / 2;
+	} while (n > 0);
+	res = string(buffer.crbegin(), buffer.crend());
+	while (res.size() < 4)
+		res = "0" + res;
+	return res;
+}

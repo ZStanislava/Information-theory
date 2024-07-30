@@ -1,0 +1,257 @@
+
+#include <iostream>
+#include <vector> //динамический массив
+#include <map> //ассоциативный массив
+#include <list> //список
+#include <fstream>
+using namespace std;
+
+class Node
+{
+public:
+int freq;
+int symbol;
+Node* left, * right;
+
+Node() { left = right = NULL; }
+
+Node(Node* L, Node* R) // перегрузка конструктора на левого и правого сына
+{
+left = L;
+right = R;
+freq = L->freq + R->freq;
+}
+};
+
+struct MyCompare
+{
+bool operator()(const Node* l, const Node* r) const { return l->freq < r->freq; }
+};
+
+vector<bool> code;
+map<int, vector<bool> > table;
+
+void BuildTable(Node* root)
+{
+if (root->left != NULL)
+{
+code.push_back(0); //если слева не 0 -в вектор 0
+BuildTable(root->left); //запускаем рекурсивную функцию для левого сына
+}
+
+if (root->right != NULL)
+{
+code.push_back(1);
+BuildTable(root->right);
+}
+
+if (root->left == NULL && root->right == NULL) table[root->symbol] = code;
+
+if (code.size())
+code.pop_back();
+}
+
+void DrawTREE(Node* Head, int Level)
+{
+if (Head != NULL)
+{
+DrawTREE(Head->left, Level + 1);
+printf("%*d %d\n", Level * 3, Head->symbol, Head->freq);
+DrawTREE(Head->right, Level + 1);
+}
+}
+
+int main()
+{
+////// считаем частоты символов
+ifstream f("1.txt", ios::in | ios::binary);
+if (!f.is_open())
+cout « "Eror";
+map<int, int> m;
+char c;
+int bit_len = 7;
+cout « "Enter bit_len";
+cin » bit_len;
+list<bool> bits;
+bool done = false;
+int index;
+
+while (!done)//пока не конец файла
+{
+index = 0;
+while (bits.size() < bit_len)
+{
+c = f.get();
+if (c == EOF)
+{
+done = true;
+c = 0;
+break;
+}
+else
+for (int i = 0; i < 8; i++)
+bits.push_back((c & (1 « (7 - i))) ? 1 : 0);
+}
+if (bits.size())
+{
+for (int i = 0; i < bit_len; i++)
+{
+index «= 1;
+if (bits.size())
+{
+index |= bits.front();
+bits.pop_front();
+}
+}
+m[index]++;
+}
+}
+//m.erase(0);
+
+/*
+t=3
+s=2
+=1
+r=1
+1=1
+64 bits->0111 0100 0111 0011 0111 0100 0010 0000
+0111 0011 0111 0100 0111 0010 0011 0001
+in map
+0111 0100 0111 0011 = 29811 = 00
+0111 0100 0010 0000 = 29728 = 01
+0111 0011 0111 0100 = 29556 = 10
+0111 0010 0011 0001 = 29233 = 11
+0001 1011 XOR 0xFF
+E4
+*/
+////// записываем начальные узлы в список list
+
+list<Node*> t;// массив указателей на узел
+for (map<int, int>::iterator itr = m.begin(); itr != m.end(); ++itr) // iterator проходит по элементам массива
+{
+Node* p = new Node; // кладем в список: создаем в дин памяти новый узел
+p->symbol = itr->first; // c-символ
+p->freq = itr->second; //a -число
+t.push_back(p);
+} // добавляем в list указатель на объекты
+
+////// создаем дерево
+
+while (t.size() != 1) //пока в списке не останется 1 элемент
+{
+t.sort(MyCompare()); // сортируем
+
+Node* SonL = t.front(); //левый сын присваиваю первого элементту в списке
+t.pop_front(); // 1 элемент удаляю
+Node* SonR = t.front(); //правый сын ,который был вторым,а стал первым
+t.pop_front(); // удаляем
+
+Node* parent = new Node(SonL, SonR); //создаем отца
+t.push_back(parent); // кладем в список
+
+}
+
+Node* root = t.front(); //root - указатель на вершину дерева
+
+////// создаем пары 'символ-код':
+DrawTREE(root, 0);
+BuildTable(root);
+
+f.clear(); f.seekg(0); // перемещаем указатель снова в начало файла
+
+ofstream g("output.txt", ios::out | ios::binary);
+char buf = 0;
+int count = 0;
+done = false;
+bits.clear();
+while (!done)//пока не конец файла
+{
+index = 0;
+while (bits.size() < bit_len)
+{
+c = f.get();
+if (c == EOF)
+{
+done = true;
+c = 0;
+}
+for (int i = 0; i < 8; i++)
+bits.push_back((c & (1 « (7 - i))) ? 1 : 0);
+}
+for (int i = 0; i < bit_len; i++)
+{
+index «= 1;
+index |= bits.front();
+bits.pop_front();
+}
+vector<bool> x = table[index];
+for (int n = 0; n < x.size(); n++)
+{ // buf=00000000 побитово складываем
+buf |= x[n] « (7 - count);
+count++;
+if (count == 8) { count = 0; g « buf; buf = 0; }
+}
+}
+if (count)
+g « buf;
+
+f.close();
+g.close();
+
+///// считывание из файла output.txt и преобразование обратно
+
+ifstream F("output.txt", ios::in |
+ios::binary);
+
+setlocale(LC_ALL, "Russian"); // чтоб русские символы отображались в командной строке
+
+Node* p = root;
+count = 0; char byte;
+byte = F.get();
+bits.clear();
+while (!F.eof())
+{
+bool b = byte & (1 « (7 - count));
+if (b) p = p->right; else p = p->left;
+if (p->left == NULL && p->right == NULL)
+{
+if (p->freq)
+{
+//cout « (char)p->symbol;
+for (int i = bit_len - 1; i >= 0; i--)
+bits.push_back((p->symbol & (1 « i)) ? 1 : 0);
+while (bits.size() >= 8)
+{
+c = 0;
+for (int i = 0; i < 8; i++)
+{
+c «= 1;
+c |= bits.front();
+bits.pop_front();
+}
+cout « c;
+}
+p->freq--;
+}
+p = root;
+}
+count++;
+if (count == 8) { count = 0; byte = F.get(); }
+}
+if (bits.size())
+{
+while (bits.size() < 8)
+bits.push_back(0);
+c = 0;
+for (int i = 0; i < 8; i++)
+{
+c «= 1;
+c |= bits.front();
+bits.pop_front();
+}
+cout « c;
+}
+F.close();
+
+return 0;
+}

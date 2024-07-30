@@ -1,0 +1,31 @@
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+int main()
+{
+ifstream file1;
+ofstream file2;
+file1.open("input.txt"); //C:\\Users\\source\\repos\\laba1
+file2.open("output.txt");
+if (file1.is_open() && file2.is_open())
+{
+cout « "File is open." « endl;
+char ch = 0;
+while (file1 » ch) //считывает один символ из файла
+{
+cout « ch « " ";
+ch ^= 255;
+file2 « ch; //записывает один символ в файл
+}
+}
+else
+{
+cout « " Error!" « endl;
+}
+file1.close();
+file2.close();
+
+return 0;
+}
+
